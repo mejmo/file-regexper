@@ -1,0 +1,3 @@
+EXCELLENCE: .*excellence.*
+XC: .*xc.*
+POSITION: .*position kindness.*

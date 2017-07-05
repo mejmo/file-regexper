@@ -26,10 +26,10 @@ package com.develmagic.fileregexper;
 public class Constants {
 
     //How many lines would be in one workset for one thread for multithreaded processing
-    public static final int WORKSET_SIZE_LINES = 10000;
+    public static int WORKSET_SIZE_LINES = 10000;
 
     //Enable multithreading only for files greater than MULTITHREAD_ENABLED_FOR_FILES_LARGER
-    public static final int MULTITHREAD_ENABLED_FOR_FILES_LARGER = 10000000;
+    public static int MULTITHREAD_ENABLED_FOR_FILES_LARGER = 10000000;
 
     //Get a count of virtual processors (including hyperthreading)
     public static final int CORE_COUNT = Runtime.getRuntime().availableProcessors();

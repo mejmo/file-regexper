@@ -37,6 +37,7 @@ public class Main {
             cmdLineParser.parseArgument(args);
             app.run(arguments.input, arguments.output, arguments.config);
         } catch (CmdLineException e) {
+            System.err.println("Fileregexper - process files with regex rules");
             System.err.println(e.getMessage());
             cmdLineParser.printUsage(System.err);
         }
