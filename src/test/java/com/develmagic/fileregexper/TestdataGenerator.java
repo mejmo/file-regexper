@@ -65,7 +65,7 @@ public class TestdataGenerator {
 
         for (int i = 1; i < 100; i++) {
             long bytesWritten = 0;
-            int c = new Random().nextInt(40000000);
+            int c = new Random().nextInt(4000000);
             FileOutputStream fo = new FileOutputStream(input.getAbsolutePath() + "/" + i + ".txt");
             do {
                 fo.write(b);
@@ -75,6 +75,20 @@ public class TestdataGenerator {
             totalWritten += bytesWritten;
             System.out.println(totalWritten);
         }
+
+        for (int i = 1; i < 5; i++) {
+            long bytesWritten = 0;
+            int c = 400000000;
+            FileOutputStream fo = new FileOutputStream(input.getAbsolutePath() + "/" + i + ".txt");
+            do {
+                fo.write(b);
+                bytesWritten += b.length;
+            } while (bytesWritten <= c);
+            fo.close();
+            totalWritten += bytesWritten;
+            System.out.println(totalWritten);
+        }
+
 
         //other test
 
