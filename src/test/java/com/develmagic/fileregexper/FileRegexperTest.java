@@ -42,6 +42,7 @@ public class FileRegexperTest {
     public void test2() throws IOException {
 
         Constants.MULTITHREAD_ENABLED_FOR_FILES_LARGER = 1000;
+        Constants.WORKSET_SIZE_LINES = 10;
         new FileRegexper().run("src/test/resources/test2/input", "src/test/resources/test2/output", "src/test/resources/test2/rules.txt");
 
         assertThat(Files.list(Paths.get("src/test/resources/test2/output")).count(), is(2L));
