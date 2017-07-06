@@ -35,6 +35,6 @@ public class Constants {
     public static final int CORE_COUNT = Runtime.getRuntime().availableProcessors();
 
     //How often to flush to the output file
-    public static final int WRITER_BUFFER = 200 * 1024 * 1024;
+//    public static final int WRITER_BUFFER = 200 * 1024 * 1024;
 
 }

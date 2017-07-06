@@ -2,8 +2,8 @@
 
 Small tool for parsing the files with regular expressions stored in config file.
 
-- Test1 - one 2GB file - 8.105s
-- Test2 - 10000 small files - 2.36s
+- Test1 - one 2GB file - 10.502s
+- Test2 - 10000 small files - 1.668s
 - Test3 - 105 random filesize, 5 larger 400MB files - 10.493s
  
 ## HW
