@@ -25,20 +25,24 @@ package com.develmagic.fileregexper;
 
 import com.develmagic.fileregexper.exception.FileRegexperException;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by mejmo on 5.7.2017.
  */
 public class OutputBuffer {
 
-    private HashMap<String, FileOutputStream> outputFiles = new HashMap<>();
+    private HashMap<String, AsynchronousFileChannel> outputFiles = new HashMap<>();
+    private HashMap<String, AtomicLong> positions = new HashMap<>();
+
     private Path outputPath;
 
     public OutputBuffer(Path outputPath) {
@@ -47,25 +51,27 @@ public class OutputBuffer {
 
     public void writeLine(String name, String line) {
         try {
-            this.getStreamForRuleName(name).write((line + System.lineSeparator()).getBytes());
+            this.getStreamForRuleName(name).write(ByteBuffer.wrap((line + System.lineSeparator()).getBytes()), this.positions.get(name).get());
+            this.positions.get(name).addAndGet((line+System.lineSeparator()).length());
         } catch (IOException e) {
             throw new FileRegexperException("Cannot write a line to output file", e);
         }
     }
 
-    private FileOutputStream getStreamForRuleName(String name) throws IOException {
-        FileOutputStream fileOutputStream;
+    private AsynchronousFileChannel getStreamForRuleName(String name) throws IOException {
+        AsynchronousFileChannel stream;
         if (outputFiles.get(name) == null) {
-            synchronized (outputFiles) {
+//            synchronized (outputFiles) {
                 try {
                     File destination = Paths.get(outputPath + File.separator + name).toFile();
                     destination.createNewFile();
-                    fileOutputStream = new FileOutputStream(destination);
+                    this.positions.put(name, new AtomicLong(0));
+                    stream = AsynchronousFileChannel.open(destination.toPath(), StandardOpenOption.WRITE);
                 } catch (FileNotFoundException e) {
                     throw new FileRegexperException(e);
                 }
-                outputFiles.put(name, fileOutputStream);
-            }
+                outputFiles.put(name, stream);
+//            }
         }
         return outputFiles.get(name);
     }
