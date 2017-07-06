@@ -35,59 +35,60 @@ public class TestdataGenerator {
 
 //        test2 - many small files
 
-//        File input = new File("_test2/input");
-//        input.mkdirs();
-//
-//        File output = new File("_test2/output");
-//        output.mkdirs();
-//
-//        File template = new File("_template/1.txt");
-//        byte[] b = Files.readAllBytes(template.toPath());
-//
-//        for (int i = 1; i < 10000; i++) {
-//            FileOutputStream fo = new FileOutputStream(input.getAbsolutePath() + "/" + i + ".txt");
-//            fo.write(b);
-//            fo.close();
-//        }
-
-        // test3 - mixed small files and large files
-
-        File input = new File("_test3/input");
+        File input = new File("_test2/input");
         input.mkdirs();
 
-        File output = new File("_test3/output");
+        File output = new File("_test2/output");
         output.mkdirs();
 
         File template = new File("_template/1.txt");
         byte[] b = Files.readAllBytes(template.toPath());
 
-        long totalWritten = 0;
-
-        for (int i = 1; i < 100; i++) {
-            long bytesWritten = 0;
-            int c = new Random().nextInt(4000000);
+        for (int i = 1; i < 10000; i++) {
             FileOutputStream fo = new FileOutputStream(input.getAbsolutePath() + "/" + i + ".txt");
-            do {
-                fo.write(b);
-                bytesWritten += b.length;
-            } while (bytesWritten <= c);
+            fo.write(b);
             fo.close();
-            totalWritten += bytesWritten;
-            System.out.println(totalWritten);
         }
+        System.exit(0);
 
-        for (int i = 1; i < 5; i++) {
-            long bytesWritten = 0;
-            int c = 400000000;
-            FileOutputStream fo = new FileOutputStream(input.getAbsolutePath() + "/" + i + ".txt");
-            do {
-                fo.write(b);
-                bytesWritten += b.length;
-            } while (bytesWritten <= c);
-            fo.close();
-            totalWritten += bytesWritten;
-            System.out.println(totalWritten);
-        }
+        // test3 - mixed small files and large files
+
+//        File input = new File("_test3/input");
+//        input.mkdirs();
+//
+//        File output = new File("_test3/output");
+//        output.mkdirs();
+//
+//        File template = new File("_template/1.txt");
+//        byte[] b = Files.readAllBytes(template.toPath());
+//
+//        long totalWritten = 0;
+//
+//        for (int i = 1; i < 100; i++) {
+//            long bytesWritten = 0;
+//            int c = new Random().nextInt(4000000);
+//            FileOutputStream fo = new FileOutputStream(input.getAbsolutePath() + "/" + i + ".txt");
+//            do {
+//                fo.write(b);
+//                bytesWritten += b.length;
+//            } while (bytesWritten <= c);
+//            fo.close();
+//            totalWritten += bytesWritten;
+//            System.out.println(totalWritten);
+//        }
+//
+//        for (int i = 1; i < 5; i++) {
+//            long bytesWritten = 0;
+//            int c = 400000000;
+//            FileOutputStream fo = new FileOutputStream(input.getAbsolutePath() + "/" + i + ".txt");
+//            do {
+//                fo.write(b);
+//                bytesWritten += b.length;
+//            } while (bytesWritten <= c);
+//            fo.close();
+//            totalWritten += bytesWritten;
+//            System.out.println(totalWritten);
+//        }
 
 
         //other test

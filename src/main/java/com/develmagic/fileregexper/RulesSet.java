@@ -34,20 +34,26 @@ import java.util.stream.Stream;
 
 public class RulesSet {
 
-        private Collection<Rule> rules;
+    public Collection<Rule> getRules() {
+        return rules;
+    }
 
-        public RulesSet(Path config) {
-            try (Stream<String> stream = Files.lines(config)) {
-                rules = stream.map(line -> new Rule(line)).collect(Collectors.toList());
-            } catch (IOException e) {
-                throw new FileRegexperException("Cannot retrieve rules list", e);
-            }
-        }
+    private Collection<Rule> rules;
 
-        public Collection<RuleMatch> getRuleMatches(String line) {
-            return rules.stream()
-                    .filter(rule -> rule.getPattern().matcher(line).matches())
-                    .map(rule -> new RuleMatch(rule, line))
-                    .collect(Collectors.toList());
+    public RulesSet(Path config) {
+        try (Stream<String> stream = Files.lines(config)) {
+            rules = stream.map(line -> new Rule(line)).collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new FileRegexperException("Cannot retrieve rules list", e);
         }
     }
+
+    public Collection<RuleMatch> getRuleMatches(String line) {
+        return rules.stream()
+                .filter(rule -> rule.getPattern().matcher(line).matches())
+                .map(rule -> new RuleMatch(rule, line))
+                .collect(Collectors.toList());
+    }
+
+
+}

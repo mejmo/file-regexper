@@ -34,4 +34,7 @@ public class Constants {
     //Get a count of virtual processors (including hyperthreading)
     public static final int CORE_COUNT = Runtime.getRuntime().availableProcessors();
 
+    //How often to flush to the output file
+    public static final int WRITER_BUFFER = 200 * 1024 * 1024;
+
 }

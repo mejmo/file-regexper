@@ -40,4 +40,11 @@ public class WriteCommand {
         outputBuffer.writeLine(this.name, this.what);
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public String getWhat() {
+        return what;
+    }
 }

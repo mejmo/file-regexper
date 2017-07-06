@@ -26,23 +26,16 @@ package com.develmagic.fileregexper;
 import com.develmagic.fileregexper.exception.FileRegexperException;
 
 import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousFileChannel;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by mejmo on 5.7.2017.
  */
 public class OutputBuffer {
 
-    private HashMap<String, AsynchronousFileChannel> outputFiles = new HashMap<>();
-    private HashMap<String, AtomicLong> positions = new HashMap<>();
-
+    private HashMap<String, BufferedWriter> outputFiles = new HashMap<>();
     private Path outputPath;
 
     public OutputBuffer(Path outputPath) {
@@ -51,29 +44,37 @@ public class OutputBuffer {
 
     public void writeLine(String name, String line) {
         try {
-            this.getStreamForRuleName(name).write(ByteBuffer.wrap((line + System.lineSeparator()).getBytes()), this.positions.get(name).get());
-            this.positions.get(name).addAndGet((line+System.lineSeparator()).length());
+            this.getStreamForRuleName(name).write(line + System.lineSeparator());
         } catch (IOException e) {
             throw new FileRegexperException("Cannot write a line to output file", e);
         }
     }
 
-    private AsynchronousFileChannel getStreamForRuleName(String name) throws IOException {
-        AsynchronousFileChannel stream;
+    private BufferedWriter getStreamForRuleName(String name) throws IOException {
+        BufferedWriter bfw;
         if (outputFiles.get(name) == null) {
-//            synchronized (outputFiles) {
+            synchronized (outputFiles) {
                 try {
                     File destination = Paths.get(outputPath + File.separator + name).toFile();
                     destination.createNewFile();
-                    this.positions.put(name, new AtomicLong(0));
-                    stream = AsynchronousFileChannel.open(destination.toPath(), StandardOpenOption.WRITE);
+                    bfw = new BufferedWriter(new FileWriter(destination));
                 } catch (FileNotFoundException e) {
                     throw new FileRegexperException(e);
                 }
-                outputFiles.put(name, stream);
-//            }
+                outputFiles.put(name, bfw);
+            }
         }
         return outputFiles.get(name);
+    }
+
+    public void close() {
+        outputFiles.values().stream().forEach(bfw -> {
+            try {
+                bfw.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
 }

@@ -26,10 +26,7 @@ package com.develmagic.fileregexper;
 import com.develmagic.fileregexper.exception.FileRegexperException;
 import org.apache.log4j.Logger;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -60,13 +57,13 @@ public class FileRegexper {
 
     public void run(String input, String output, String config) {
 
+
         inputPath = Paths.get(input);
         outputPath = Paths.get(output);
         configurationFilePath = Paths.get(config);
 
         this.outputBuffer = new OutputBuffer(outputPath);
         this.rulesSet = new RulesSet(configurationFilePath);
-
         stats[SINGLETHREADED_COUNT] = new AtomicInteger(0);
         stats[MULTITHREADED_COUNT] = new AtomicInteger(0);
 
@@ -91,7 +88,8 @@ public class FileRegexper {
                     .forEach(this::processFileSingleThread);
             Files.list(inputPath)
                     .filter(file -> file.toFile().length() >= Constants.MULTITHREAD_ENABLED_FOR_FILES_LARGER)
-                    .forEach(this::processFileMultithreaded);
+                    .forEach(this::processFileMultithreaded4);
+            this.outputBuffer.close();
         } catch (IOException e) {
             throw new FileRegexperException("Cannot read from input folder", e);
         }
@@ -99,54 +97,104 @@ public class FileRegexper {
 
     /**
      * Data is cut to smaller pieces (worksets) and these are processed by threads from ExecutorService.
+     *
      * @param file
      */
-    private void processFileMultithreaded(Path file) {
+//    private void processFileMultithreaded(Path file) {
+//
+//        if (logger.isDebugEnabled())
+//            logger.debug("Processing file multi threaded: " + file.getFileName() + " Filesize: " + file.toFile().length());
+//
+//        stats[MULTITHREADED_COUNT].incrementAndGet();
+//        try {
+//
+//            FileInputStream fileInputStream = new FileInputStream(file.toFile());
+//            BufferedReader br = new BufferedReader(new InputStreamReader(fileInputStream, StandardCharsets.UTF_8));
+//            ExecutorService executorService = Executors.newFixedThreadPool(Constants.CORE_COUNT);
+//
+//            String line = null;
+//
+//            do {
+//                Workset[] worksets = new Workset[Constants.CORE_COUNT];
+//
+//                for (int i = 0; i < Constants.CORE_COUNT; i++)
+//                    worksets[i] = new Workset(Constants.WORKSET_SIZE_LINES);
+//
+//                for (int i = 0; i < Constants.CORE_COUNT; i++) {
+//                    while ((line = br.readLine()) != null) {
+//                        worksets[i].add(line);
+//                        if (worksets[i].size() >= Constants.WORKSET_SIZE_LINES)
+//                            break;
+//                    }
+//                    if (line == null)
+//                        break;
+//                }
+//
+//                Future<List<WriteCommand>>[] results = new Future[Constants.CORE_COUNT];
+//
+//                for (int i = 0; i < Constants.CORE_COUNT; i++) {
+//                    results[i] = executorService.submit(new WorksetProcessorTask(worksets[i]));
+//                }
+//
+//                //We will wait for each thread to complete the task
+//                for (Future<List<WriteCommand>> result : results) {
+//                    for (WriteCommand writeCommand : result.get()) {
+//                        writeCommand.execute(this.outputBuffer);
+//                    }
+//                }
+//
+//            } while (line != null);
+//
+//            executorService.shutdown();
+//
+//        } catch (IOException | ExecutionException e) {
+//            throw new FileRegexperException("Cannot process line", e);
+//        } catch (InterruptedException e) {
+//        }
+//    }
+
+    private void processFileMultithreaded4(Path file) {
 
         if (logger.isDebugEnabled())
-            logger.debug("Processing file multi threaded: "+file.getFileName()+" Filesize: "+file.toFile().length());
+            logger.debug("Processing file multi threaded: " + file.getFileName() + " Filesize: " + file.toFile().length());
 
         stats[MULTITHREADED_COUNT].incrementAndGet();
         try {
 
             FileInputStream fileInputStream = new FileInputStream(file.toFile());
             BufferedReader br = new BufferedReader(new InputStreamReader(fileInputStream, StandardCharsets.UTF_8));
-            ExecutorService executorService = Executors.newFixedThreadPool(Constants.CORE_COUNT);
+            ExecutorService workerService = Executors.newFixedThreadPool(Constants.CORE_COUNT);
+            ExecutorService readService = Executors.newSingleThreadExecutor();
 
-            String line = null;
+            ReaderTaskResult readerTaskResult = new ReaderTask(br).call();
 
             do {
-                Workset[] worksets = new Workset[Constants.CORE_COUNT];
-
-                for (int i = 0; i < Constants.CORE_COUNT; i++)
-                    worksets[i] = new Workset(Constants.WORKSET_SIZE_LINES);
-
-                for (int i = 0; i < Constants.CORE_COUNT; i++) {
-                    while ((line = br.readLine()) != null) {
-                        worksets[i].add(line);
-                        if (worksets[i].size() >= Constants.WORKSET_SIZE_LINES)
-                            break;
-                    }
-                    if (line == null)
-                        break;
-                }
 
                 Future<List<WriteCommand>>[] results = new Future[Constants.CORE_COUNT];
+                Future<ReaderTaskResult> futureReaderResult;
 
                 for (int i = 0; i < Constants.CORE_COUNT; i++) {
-                    results[i] = executorService.submit(new WorksetProcessorTask(worksets[i]));
+                    results[i] = workerService.submit(new WorksetProcessorTask(readerTaskResult.getWorksets()[i]));
                 }
+                futureReaderResult = readService.submit(new ReaderTask(br));
+                readerTaskResult = this.flushResult(results, futureReaderResult);
 
-                //We will wait for each thread to complete the task
-                for (Future<List<WriteCommand>> result : results) {
-                    for (WriteCommand writeCommand : result.get()) {
-                        writeCommand.execute(this.outputBuffer);
-                    }
+            } while (!readerTaskResult.eof);
+
+            Future<List<WriteCommand>>[] results = new Future[Constants.CORE_COUNT];
+
+            for (int i = 0; i < Constants.CORE_COUNT; i++) {
+                results[i] = workerService.submit(new WorksetProcessorTask(readerTaskResult.getWorksets()[i]));
+            }
+
+            for (Future<List<WriteCommand>> result : results) {
+                for (WriteCommand writeCommand : result.get()) {
+                    writeCommand.execute(this.outputBuffer);
                 }
+            }
 
-            } while (line != null);
-
-            executorService.shutdown();
+            workerService.shutdown();
+            readService.shutdown();
 
         } catch (IOException | ExecutionException e) {
             throw new FileRegexperException("Cannot process line", e);
@@ -154,14 +202,25 @@ public class FileRegexper {
         }
     }
 
+    public ReaderTaskResult flushResult(Future<List<WriteCommand>>[] results, Future<ReaderTaskResult> futureReaderResult) throws ExecutionException, InterruptedException {
+        //We will wait for each thread to complete the task
+        for (Future<List<WriteCommand>> result : results) {
+            for (WriteCommand writeCommand : result.get()) {
+                writeCommand.execute(this.outputBuffer);
+            }
+        }
+        return futureReaderResult.get();
+    }
+
     /**
      * Line by line goes through the stream of lines
+     *
      * @param file
      */
     private void processFileSingleThread(Path file) {
 
         if (logger.isDebugEnabled())
-            logger.info("Processing file single threaded: "+file.getFileName()+" Filesize: "+file.toFile().length());
+            logger.info("Processing file single threaded: " + file.getFileName() + " Filesize: " + file.toFile().length());
 
         stats[SINGLETHREADED_COUNT].incrementAndGet();
         try {
@@ -173,6 +232,7 @@ public class FileRegexper {
 
     /**
      * Gets a list of matched rules against the line and returns WriteCommand list for later execution
+     *
      * @param line
      * @return
      */
@@ -184,6 +244,7 @@ public class FileRegexper {
 
     /**
      * Used for single threaded processing
+     *
      * @param line
      */
     private void processLine(String line) {
@@ -211,10 +272,92 @@ public class FileRegexper {
         }
     }
 
+    public class ReaderTaskResult {
+        private Workset[] worksets;
+        private boolean eof;
+
+        public ReaderTaskResult(Workset[] worksets, boolean eof) {
+            this.worksets = worksets;
+            this.eof = eof;
+        }
+
+        public Workset[] getWorksets() {
+            return worksets;
+        }
+
+        public void setWorksets(Workset[] worksets) {
+            this.worksets = worksets;
+        }
+
+        public boolean isEof() {
+            return eof;
+        }
+
+        public void setEof(boolean eof) {
+            this.eof = eof;
+        }
+    }
+
+    public class ReaderTask implements Callable<ReaderTaskResult> {
+
+        private BufferedReader reader;
+
+        public ReaderTask(BufferedReader reader) {
+            this.reader = reader;
+        }
+
+        @Override
+        public ReaderTaskResult call() throws IOException {
+
+            Workset[] worksets = new Workset[Constants.CORE_COUNT];
+            boolean eof = false;
+            String line = null;
+
+            for (int i = 0; i < Constants.CORE_COUNT; i++)
+                worksets[i] = new Workset(Constants.WORKSET_SIZE_LINES);
+
+            for (int i = 0; i < Constants.CORE_COUNT; i++) {
+                while ((line = this.reader.readLine()) != null) {
+                    worksets[i].add(line);
+                    if (worksets[i].size() >= Constants.WORKSET_SIZE_LINES)
+                        break;
+                }
+                if (line == null) {
+                    eof = true;
+                    break;
+                }
+            }
+
+            return new ReaderTaskResult(worksets, eof);
+        }
+    }
+//
+//    public class WorksetProcessorTask2 implements Callable<List<WriteCommand>> {
+//
+//        private Workset w;
+//
+//        public WorksetProcessorTask2(Workset w) {
+//            this.w = w;
+//        }
+//
+//        @Override
+//        public List<WriteCommand> call() {
+//            List<WriteCommand> ret = new ArrayList<>();
+//            for (String line : this.w) {
+//                for (Rule rule : rulesSet.getRules()) {
+//                    if (rule.getPattern().matcher(line).matches()) {
+//                        ret.add(new WriteCommand(rule.getName(), line));
+//                    }
+//                }
+//            }
+//            return ret;
+//        }
+//    }
+
     private void writeStats(float duration) {
-        logger.info("Singlethreaded files count: "+stats[SINGLETHREADED_COUNT].get());
-        logger.info("Multithreaded files count:  "+stats[MULTITHREADED_COUNT].get());
-        logger.info("Processing duration:        "+duration+" s");
+        logger.info("Singlethreaded files count: " + stats[SINGLETHREADED_COUNT].get());
+        logger.info("Multithreaded files count:  " + stats[MULTITHREADED_COUNT].get());
+        logger.info("Processing duration:        " + duration + " s");
     }
 
 }
