@@ -103,6 +103,7 @@ public class FileRegexper {
             logger.debug("Processing file multi threaded: " + file.getFileName() + " Filesize: " + file.toFile().length());
 
         stats[MULTITHREADED_COUNT].incrementAndGet();
+
         try {
 
             FileInputStream fileInputStream = new FileInputStream(file.toFile());
@@ -120,8 +121,11 @@ public class FileRegexper {
                     results[i] = workerService.submit(new WorksetProcessorTask(readerTaskResult.getWorksets()[i]));
                 }
                 futureReaderResult = workerService.submit(new ReaderTask(br));
+
                 this.flushResult(results);
+
                 readerTaskResult = futureReaderResult.get();
+
 
             } while (!readerTaskResult.eof);
 
@@ -132,9 +136,7 @@ public class FileRegexper {
             }
 
             this.flushResult(results);
-
             workerService.shutdown();
-//            readService.shutdown();
 
         } catch (IOException | ExecutionException e) {
             throw new FileRegexperException("Cannot process line", e);
