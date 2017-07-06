@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Main logic
@@ -56,6 +57,7 @@ public class FileRegexper {
 
     private static final int SINGLETHREADED_COUNT = 0;
     private static final int MULTITHREADED_COUNT = 1;
+    private static final int LINES_PROCESSED = 2;
 
     public void run(String input, String output, String config) {
 
@@ -68,6 +70,7 @@ public class FileRegexper {
         this.rulesSet = new RulesSet(configurationFilePath);
         stats[SINGLETHREADED_COUNT] = new AtomicInteger(0);
         stats[MULTITHREADED_COUNT] = new AtomicInteger(0);
+        stats[LINES_PROCESSED] = new AtomicInteger(0);
 
         long millis = Clock.systemUTC().millis();
         logger.info("Starting processing. ");
@@ -147,9 +150,7 @@ public class FileRegexper {
     public void flushResult(Future<List<WriteCommand>>[] results) throws ExecutionException, InterruptedException {
         //We will wait for each thread to complete the task
         for (Future<List<WriteCommand>> result : results) {
-            for (WriteCommand writeCommand : result.get()) {
-                writeCommand.execute(this.outputBuffer);
-            }
+            result.get().forEach(writeCommand -> writeCommand.execute(this.outputBuffer));
         }
 
     }
@@ -179,7 +180,8 @@ public class FileRegexper {
      * @return
      */
     private List<WriteCommand> processLineMultihreaded(String line) {
-        return this.rulesSet.getRuleMatches(line).stream()
+        stats[LINES_PROCESSED].incrementAndGet();
+        return this.rulesSet.getRuleMatches(line)
                 .map(ruleMatch -> new WriteCommand(ruleMatch.getRule().getName(), line))
                 .collect(Collectors.toList());
     }
@@ -190,7 +192,8 @@ public class FileRegexper {
      * @param line
      */
     private void processLine(String line) {
-        this.rulesSet.getRuleMatches(line).stream()
+        stats[LINES_PROCESSED].incrementAndGet();
+        this.rulesSet.getRuleMatches(line)
                 .forEach(ruleMatch -> this.outputBuffer.writeLine(ruleMatch.getRule().getName(), line));
     }
 
@@ -277,6 +280,7 @@ public class FileRegexper {
     private void writeStats(float duration) {
         logger.info("Singlethreaded files count: " + stats[SINGLETHREADED_COUNT].get());
         logger.info("Multithreaded files count:  " + stats[MULTITHREADED_COUNT].get());
+        logger.info("Lines processed:            " + stats[LINES_PROCESSED].get());
         logger.info("Processing duration:        " + duration + " s");
     }
 

@@ -48,11 +48,10 @@ public class RulesSet {
         }
     }
 
-    public Collection<RuleMatch> getRuleMatches(String line) {
+    public Stream<RuleMatch> getRuleMatches(String line) {
         return rules.stream()
                 .filter(rule -> rule.getPattern().matcher(line).matches())
-                .map(rule -> new RuleMatch(rule, line))
-                .collect(Collectors.toList());
+                .map(rule -> new RuleMatch(rule, line));
     }
 
 
