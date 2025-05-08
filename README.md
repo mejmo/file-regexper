@@ -1,5 +1,7 @@
 # FileRegexper
 
+**Coding assignment. Interview 2017**
+
 Small tool for parsing the files with regular expressions stored in config file.
 
 - Test1 - one 2GB file - 10.502s
